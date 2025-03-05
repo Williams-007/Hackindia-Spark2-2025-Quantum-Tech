@@ -1,0 +1,132 @@
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+from PIL import Image, ImageTk  # For image handling
+import os
+
+# Set your GeminiAI API key directly
+# geminiai.api_key = "YOUR_GEMINIAI_API_KEY"
+
+from google import genai
+
+client = genai.Client(api_key="AIzaSyB0DDIRpTZCj8SGBVcc_1-WCfDkukfQKDc")
+
+response = client.models.generate_content(
+    model="gemini-2.0-flash",
+    contents="Explain how AI works",
+)
+
+print(response.text)
+
+# Global settings for team branding
+TEAM_NAME = "QUANTUM SHIELD"
+TEAM_IMAGE_PATH = "assets/Team_Logo.jpeg"  # Update with the actual image path
+
+class ChatbotGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title(f"{TEAM_NAME} Chatbot")
+        self.root.geometry("600x500")
+        self.setup_gui()
+
+    def setup_gui(self):
+        # 1. Team Branding Section
+        branding_frame = ttk.Frame(self.root)
+        branding_frame.pack(pady=10)
+
+        # Attempt to load and display the team image
+        try:
+            self.team_image = Image.open(TEAM_IMAGE_PATH)
+            self.team_image = self.team_image.resize((100, 100), Image.LANCZOS)
+            self.team_photo = ImageTk.PhotoImage(self.team_image)
+            image_label = ttk.Label(branding_frame, image=self.team_photo)
+            image_label.pack(side="left", padx=10)
+        except Exception as e:
+            print("Error loading team image:", e)
+
+        # Display the team name label
+        team_name_label = ttk.Label(branding_frame, text=TEAM_NAME, font=("Helvetica", 20, "bold"))
+        team_name_label.pack(side="left", padx=10)
+
+        # 2. Input for User Name
+        user_frame = ttk.Frame(self.root)
+        user_frame.pack(pady=5)
+
+        user_label = ttk.Label(user_frame, text="Enter your name:", font=("Helvetica", 12))
+        user_label.pack(side="left")
+
+        self.user_entry = ttk.Entry(user_frame, width=30)
+        self.user_entry.pack(side="left", padx=5)
+
+        # 3. Start Button to Initialize Chat
+        start_button = ttk.Button(user_frame, text="Start Chat", command=self.start_chat)
+        start_button.pack(side="left", padx=5)
+
+        # 4. Chat Display Area
+        chat_frame = ttk.Frame(self.root)
+        chat_frame.pack(pady=10, fill="both", expand=True)
+
+        self.chat_display = tk.Text(chat_frame, height=15, width=60, state="disabled", wrap="word", bg="#f0f0f0", font=("Helvetica", 12))
+        self.chat_display.pack(pady=10, padx=10, fill="both", expand=True)
+
+        # 5. Message Entry and Send Button
+        message_frame = ttk.Frame(self.root)
+        message_frame.pack(pady=5)
+
+        self.message_entry = ttk.Entry(message_frame, width=50)
+        self.message_entry.pack(side="left", padx=5)
+
+        send_button = ttk.Button(message_frame, text="Send", command=self.send_message)
+        send_button.pack(side="left")
+
+    def start_chat(self):
+        # Retrieve user name from the input field
+        username = self.user_entry.get().strip()
+        if username == "":
+            messagebox.showerror("Input Error", "Please enter your name to start the chat.")
+            return
+        # Display a welcome message in the chat area
+        welcome_message = f"Hello, {username}! Welcome to {TEAM_NAME} Chatbot. How can I assist you today?"
+        self.display_message("Chatbot", welcome_message)
+
+    def display_message(self, sender, message):
+        # Enable the chat display, insert the message, then disable it again
+        self.chat_display.config(state="normal")
+        self.chat_display.insert("end", f"{sender}: {message}\n")
+        self.chat_display.config(state="disabled")
+        self.chat_display.see("end")
+
+    def send_message(self):
+        # Get the user's message from the entry box
+        user_message = self.message_entry.get().strip()
+        if user_message == "":
+            return
+        # Display the user's message
+        username = self.user_entry.get().strip() or "User"
+        self.display_message(username, user_message)
+        self.message_entry.delete(0, "end")
+
+        # Generate and display the chatbot's response using live AI
+        response = self.generate_response(user_message)
+        self.display_message("Chatbot", response)
+
+    def generate_response(self, message):
+        """Generate a live response using GeminiAI's model."""
+        try:
+            # Make an API call to get the response
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=message,
+            )
+            answer = response.text.strip()
+            return answer
+        except Exception as e:
+            error_details = str(e)
+            print("Error generating response:", error_details)
+            # Return a more informative message to the user
+            return f"An error occurred: {error_details}. Please try again later."
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ChatbotGUI(root)
+    root.mainloop()
